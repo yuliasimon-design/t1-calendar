@@ -2,14 +2,14 @@ name: Update T1 Calendar
 
 on:
   schedule:
-    - cron: '0 */12 * * *' # 每 12 小時執行一次
-  workflow_dispatch:      # 允許手動點擊執行
+    - cron: '0 */12 * * *' # 每 12 小時自動執行一次
+  workflow_dispatch:      # 允許你手動點擊執行
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 允許程式把檔案寫回 GitHub
+      contents: write     # 必備：允許機器人寫入檔案回儲存庫
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
