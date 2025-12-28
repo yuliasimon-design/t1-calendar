@@ -12,9 +12,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # 升級到最新版
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -23,8 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install requests ics
 
       - name: Run sync script
         run: python sync_calendar.py
@@ -33,11 +30,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # 如果檔案沒變化，這行會跳過而不報錯
           git add t1_calendar.ics
-          if git diff --staged --quiet; then
-            echo "沒有任何行程變動，跳過更新。"
-          else
-            git commit -m "自動更新 T1 行事曆: $(date +'%Y-%m-%d %H:%M')"
-            git push origin HEAD:${{ github.ref }}
-          fi
+          git commit -m "Update T1 Calendar" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }} || echo "No changes to push"
