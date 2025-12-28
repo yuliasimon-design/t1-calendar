@@ -3,14 +3,15 @@ from ics import Calendar, Event
 from datetime import datetime, timedelta
 
 def fetch_events(calendar_id):
-    # 擴大範圍：抓取前後三個月，確保能抓到資料
     all_events = []
     headers = {"User-Agent": "Mozilla/5.0"}
     
-    # 產生最近 6 個月的清單
+    # --- 修改這裡：擴大時間範圍 ---
     now = datetime.now()
-    check_dates = [(now + timedelta(days=30*i)) for i in range(-1, 5)]
+    # range(-3, 7) 代表：從 3 個月前開始，一直抓到往後 6 個月 (共 10 個月)
+    check_dates = [(now + timedelta(days=30*i)) for i in range(-3, 7)]
     months = sorted(list(set((d.year, d.month) for d in check_dates)))
+    # ----------------------------
     
     for year, month in months:
         url = f"https://timetreeapp.com/api/v1/public_calendars/{calendar_id}/events?year={year}&month={month}"
@@ -28,12 +29,11 @@ def fetch_events(calendar_id):
 
 def create_ics(events, filename="t1_calendar.ics"):
     c = Calendar()
-    # 即使沒行程也加入一個「日曆已同步」的標記行程，避免檔案消失
     if not events:
         e = Event()
-        e.name = "T1 日曆同步正常 (目前無行程)"
+        e.name = "T1 日曆同步正常 (目前範圍內無行程)"
         e.begin = datetime.now()
-        e.description = "目前 TimeTree 上暫無公開行程。"
+        e.description = "請檢查 TimeTree 網址是否有更新行程。"
         c.events.add(e)
     else:
         for item in events:
@@ -51,5 +51,5 @@ def create_ics(events, filename="t1_calendar.ics"):
 if __name__ == "__main__":
     CALENDAR_ID = "t1isthebest"
     events = fetch_events(CALENDAR_ID)
-    create_ics(events) # 強制產生檔案
-    print(f"處理完成！")
+    create_ics(events)
+    print(f"處理完成，共抓取到 {len(events)} 個行程！")
