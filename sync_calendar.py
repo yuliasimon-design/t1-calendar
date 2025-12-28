@@ -2,45 +2,47 @@ import requests
 from ics import Calendar, Event
 from datetime import datetime
 
-def fetch_monthly_events(calendar_id, year, month):
-    # 使用 TimeTree 最穩定的月份 API 格式
-    url = f"https://timetreeapp.com/api/v1/public_calendars/{calendar_id}/events?year={year}&month={month}"
+def fetch_events(calendar_id):
+    # 修正後的 API 路徑：移除 v1 並確認 ID 位置
+    # 根據 TimeTree 公開日曆的特性，使用 start_at 與 end_at 更加穩定
+    url = f"https://timetreeapp.com/api/public_calendars/{calendar_id}/events"
     
-    # 增加更完整的 Header，防止被 API 拒絕
+    params = {
+        "start_at": "2025-12-01",
+        "end_at": "2026-01-31"
+    }
+    
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Referer": f"https://timetreeapp.com/p/{calendar_id}"
+        "Accept": "application/json"
     }
     
     try:
-        response = requests.get(url, headers=headers)
-        print(f"嘗試抓取 {year}/{month}，狀態碼: {response.status_code}")
+        response = requests.get(url, params=params, headers=headers)
+        print(f"嘗試抓取 API，狀態碼: {response.status_code}")
         
         if response.status_code == 200:
-            data = response.json()
-            events = data.get('data', [])
-            return events
+            return response.json().get('data', [])
         else:
+            # 備案路徑：如果上面失敗，嘗試另一種 API 格式
+            alt_url = f"https://timetreeapp.com/api/v1/public_calendars/{calendar_id}/events"
+            response = requests.get(alt_url, params=params, headers=headers)
+            if response.status_code == 200:
+                return response.json().get('data', [])
             print(f"抓取失敗，錯誤訊息: {response.text[:100]}")
     except Exception as e:
         print(f"發生異常: {e}")
     return []
 
 if __name__ == "__main__":
-    # 確認 ID 是否為 t1isthebest
     CALENDAR_ID = "t1isthebest"
     c = Calendar()
     
-    all_events_found = []
-    # 抓取 12 月和 1 月
-    for y, m in [(2025, 12), (2026, 1)]:
-        found = fetch_monthly_events(CALENDAR_ID, y, m)
-        all_events_found.extend(found)
-        print(f"{y}/{m} 發現 {len(found)} 個行程")
+    events_data = fetch_events(CALENDAR_ID)
+    print(f"本次抓取獲得 {len(events_data)} 個行程。")
 
-    if all_events_found:
-        for item in all_events_found:
+    if events_data:
+        for item in events_data:
             attrs = item.get('attributes', {})
             e = Event()
             e.name = attrs.get('title')
@@ -49,13 +51,13 @@ if __name__ == "__main__":
             e.description = attrs.get('description', '')
             c.events.add(e)
     else:
-        # 如果還是抓不到，至少留下當前時間的標記，確保檔案有更新
+        # 保險：確保即使沒抓到資料也會產生檔案
         e = Event()
-        e.name = f"同步檢查完成 (未發現行程) - {datetime.now().strftime('%H:%M')}"
+        e.name = f"同步檢查完成 (最後嘗試日期: {datetime.now().strftime('%Y-%m-%d')})"
         e.begin = datetime.now()
         c.events.add(e)
 
     with open("t1_calendar.ics", 'w', encoding='utf-8') as f:
         f.writelines(c.serialize_iter())
     
-    print(f"✅ 處理完畢！總共寫入 {len(all_events_found)} 個行程。")
+    print(f"✅ 檔案已成功寫入。")
